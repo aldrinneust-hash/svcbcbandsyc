@@ -962,39 +962,18 @@ function handleIncomingSyncState(incomingState) {
 // Replace at the bottom of app.js
 
 // Broadcast current Host state (including all custom song definitions)
-function broadcastAppState() {
-  if (typeof syncChannel === 'undefined' || !syncChannel) return;
-  
-  const payload = {
-    songs: appState.songs, // Send complete song database!
-    setlists: appState.setlists, // Send setlist structures
-    activeSetlistId: appState.activeSetlistId,
-    activeSongId: appState.activeSong ? appState.activeSong.id : null
-  };
-  
-  syncChannel.postMessage({
-    type: 'SYNC_STATE',
-    payload: payload
-  });
-}
-
-// Receive Host state and import all custom songs into connected device
-function handleIncomingSyncState(incomingState) {
 function handleIncomingSyncState(incomingState) {
   if (!incomingState) return;
 
-  // FIX: Extract the data correctly. Broadcasts wrap the data in a "payload" property.
-  const data = incomingState.payload ? incomingState.payload : incomingState;
-
-  // FORCE OVERWRITE: Sync device mirrors the host's custom songs exactly
-  if (data.songs && data.songs.length > 0) {
-    appState.songs = data.songs;
+  // FORCE OVERWRITE: Client devices must mirror the host exactly to see custom songs
+  if (incomingState.songs && incomingState.songs.length > 0) {
+    appState.songs = incomingState.songs;
   }
-  if (data.setlists && data.setlists.length > 0) {
-    appState.setlists = data.setlists;
+  if (incomingState.setlists && incomingState.setlists.length > 0) {
+    appState.setlists = incomingState.setlists;
   }
-  if (data.activeSetlistId) {
-    appState.activeSetlistId = data.activeSetlistId;
+  if (incomingState.activeSetlistId) {
+    appState.activeSetlistId = incomingState.activeSetlistId;
   }
 
   // Save the mirrored data to the viewer's local storage
@@ -1010,8 +989,8 @@ function handleIncomingSyncState(incomingState) {
   }
 
   // Sync the current Live Performance screen
-  if (data.activeSongId) {
-    const songToPlay = appState.songs.find(s => s.id === data.activeSongId);
+  if (incomingState.activeSongId) {
+    const songToPlay = appState.songs.find(s => s.id === incomingState.activeSongId);
     if (songToPlay) {
       appState.activeSong = songToPlay;
       if (typeof renderChordSheet === 'function') renderChordSheet(songToPlay);

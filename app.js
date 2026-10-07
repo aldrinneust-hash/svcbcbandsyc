@@ -980,33 +980,27 @@ function broadcastAppState() {
 
 // Receive Host state and import all custom songs into connected device
 function handleIncomingSyncState(incomingState) {
+function handleIncomingSyncState(incomingState) {
   if (!incomingState) return;
-  
-  // 1. FIX: Sync/Merge ALL custom songs from host into local memory
-  if (incomingState.songs && Array.isArray(incomingState.songs)) {
-    incomingState.songs.forEach(hostSong => {
-      const existingIndex = appState.songs.findIndex(s => s.id === hostSong.id);
-      if (existingIndex === -1) {
-        appState.songs.push(hostSong); // Add missing custom song
-      } else {
-        appState.songs[existingIndex] = hostSong; // Update song content
-      }
-    });
+
+  // FIX: Extract the data correctly. Broadcasts wrap the data in a "payload" property.
+  const data = incomingState.payload ? incomingState.payload : incomingState;
+
+  // FORCE OVERWRITE: Sync device mirrors the host's custom songs exactly
+  if (data.songs && data.songs.length > 0) {
+    appState.songs = data.songs;
   }
-  
-  // 2. Sync Setlists
-  if (incomingState.setlists && Array.isArray(incomingState.setlists)) {
-    appState.setlists = incomingState.setlists;
+  if (data.setlists && data.setlists.length > 0) {
+    appState.setlists = data.setlists;
   }
-  
-  if (incomingState.activeSetlistId) {
-    appState.activeSetlistId = incomingState.activeSetlistId;
+  if (data.activeSetlistId) {
+    appState.activeSetlistId = data.activeSetlistId;
   }
-  
-  // 3. Save merged data locally so custom songs persist
+
+  // Save the mirrored data to the viewer's local storage
   saveLocalStorage();
-  
-  // 4. Update UI so custom setlist songs immediately render
+
+  // Force the UI to immediately redraw with the host's custom songs
   renderSongLibrary();
   renderSetlists();
   
@@ -1014,15 +1008,13 @@ function handleIncomingSyncState(incomingState) {
   if (activeSetlist && typeof renderSetlistSongList === 'function') {
     renderSetlistSongList(activeSetlist);
   }
-  
-  // 5. Sync active performance song view
-  if (incomingState.activeSongId) {
-    const songToPlay = appState.songs.find(s => s.id === incomingState.activeSongId);
+
+  // Sync the current Live Performance screen
+  if (data.activeSongId) {
+    const songToPlay = appState.songs.find(s => s.id === data.activeSongId);
     if (songToPlay) {
       appState.activeSong = songToPlay;
-      if (typeof renderChordSheet === 'function') {
-        renderChordSheet(songToPlay);
-      }
+      if (typeof renderChordSheet === 'function') renderChordSheet(songToPlay);
     }
   }
 }
